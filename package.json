@@ -1,0 +1,12 @@
+{
+  "name": "sobrou-pro-beta-site",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Site responsivo de análise humorística de conversas por IA",
+  "scripts": {
+    "dev": "netlify dev"
+  },
+  "devDependencies": {
+    "netlify-cli": "^23.0.0"
+  }
+}

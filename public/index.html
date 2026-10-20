@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#101116">
+<meta name="description" content="Envie um print, receba uma análise de conversa por IA e descubra: sobrou pro beta?">
+<title>Sobrou pro Beta?</title>
+<style>
+:root{color-scheme:dark;--bg:#0b0c10;--panel:#151720;--panel2:#1d2030;--text:#f5f6fb;--muted:#a5a9bb;--accent:#b8ff5c;--pink:#ff6b9a;--line:#2a2d3c;--danger:#ff7b7b}
+*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:radial-gradient(ellipse at 50% -10%,#252a42 0,#0b0c10 54%);color:var(--text);font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;min-height:100vh}
+button,input,textarea{font:inherit}button{touch-action:manipulation}.wrap{width:min(1080px,92vw);margin:auto;padding:24px 0 52px}.top{display:flex;align-items:center;gap:12px;margin-bottom:38px}.logo{width:46px;height:46px;border-radius:15px;background:var(--accent);color:#12150d;display:grid;place-items:center;font-size:26px;font-weight:950;flex-shrink:0}.eyebrow{color:var(--accent);font-size:11px;letter-spacing:.16em;text-transform:uppercase;font-weight:850}.top h1{font-size:clamp(22px,3.4vw,31px);margin:2px 0 0;letter-spacing:-.04em}.hero{margin-bottom:28px}.hero h2{font-size:clamp(38px,7vw,70px);line-height:.98;letter-spacing:-.065em;margin:0 0 17px;max-width:800px}.hero h2 span{color:var(--accent)}.hero p{color:var(--muted);font-size:clamp(14px,2vw,17px);line-height:1.65;max-width:690px;margin:0}.tags{display:flex;gap:8px;flex-wrap:wrap;margin-top:18px}.tag{border:1px solid var(--line);border-radius:99px;padding:7px 10px;color:#d4d7e5;font-size:12px;background:#151720aa}.grid{display:grid;grid-template-columns:1fr 1fr;gap:18px}.card{background:rgba(21,23,32,.94);border:1px solid var(--line);border-radius:22px;padding:clamp(17px,3vw,24px);box-shadow:0 20px 60px #0002;min-width:0}.card h3{margin:0 0 7px;font-size:19px}.sub{color:var(--muted);font-size:13px;line-height:1.55;margin:0 0 18px}.drop{border:1.5px dashed #4b5066;border-radius:16px;min-height:205px;display:flex;align-items:center;justify-content:center;text-align:center;padding:18px;cursor:pointer;background:#10121a;position:relative;overflow:hidden}.drop:hover,.drop:focus-within{border-color:var(--accent)}.drop input{position:absolute;inset:0;opacity:0;width:100%;height:100%;cursor:pointer}.drop-content{pointer-events:none}.drop .emoji{font-size:34px;margin-bottom:8px}.drop strong{display:block}.drop small{color:var(--muted);display:block;margin-top:7px}.preview{max-width:100%;max-height:340px;border-radius:12px;display:none;margin:14px auto 0;object-fit:contain}.fieldlabel{font-size:11px;color:var(--muted);font-weight:800;letter-spacing:.08em;display:block;margin:12px 0 8px}.textin{width:100%;min-height:205px;resize:vertical;border:1px solid var(--line);border-radius:13px;background:#10121a;color:var(--text);padding:13px;font-size:14px;line-height:1.6;outline:none}.textin:focus{border-color:var(--accent)}.actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:15px}.btn{border:0;border-radius:12px;padding:13px 16px;font-weight:850;cursor:pointer;font-size:14px;min-height:46px;transition:transform .12s,filter .12s}.btn:active{transform:scale(.98)}.btn:disabled{opacity:.55;cursor:wait}.primary{background:var(--accent);color:#11150b}.secondary{background:var(--panel2);color:var(--text);border:1px solid var(--line)}.btn:hover{filter:brightness(1.08)}.status{display:none;margin-top:14px;color:var(--muted);font-size:13px;line-height:1.5}.status.show{display:block}.spinner{display:inline-block;width:13px;height:13px;border:2px solid #656a7b;border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite;vertical-align:-2px;margin-right:7px}@keyframes spin{to{transform:rotate(360deg)}}.result{display:none;margin-top:20px;background:linear-gradient(145deg,#171b27,#11131a);border:1px solid #34394a;border-radius:22px;padding:clamp(18px,4vw,28px)}.resulttop{display:flex;align-items:flex-start;justify-content:space-between;gap:20px}.result h3{font-size:clamp(22px,4vw,31px);line-height:1.1;margin:7px 0 10px;letter-spacing:-.04em}.result p,.result li{color:#d3d6e2;line-height:1.65}.result p{margin:0}.pill{font-size:11px;text-transform:uppercase;letter-spacing:.1em;font-weight:900;color:var(--accent)}.score{width:104px;height:104px;flex-shrink:0;border-radius:50%;border:7px solid var(--pink);display:grid;place-items:center;text-align:center;font-weight:950;font-size:28px;background:#11131a}.score small{display:block;font-size:10px;color:var(--muted);font-weight:750}.meter{height:8px;border-radius:99px;background:#292d3c;overflow:hidden;margin:18px 0 5px}.meter span{display:block;height:100%;width:0;background:var(--accent);border-radius:99px;transition:width .6s}.result h4{margin:22px 0 8px;font-size:14px}.result ul{padding-left:20px;margin:8px 0}.meme-box{margin-top:10px;padding:14px;background:#0d0f16;border:1px solid var(--line);border-radius:15px;text-align:center}.meme-box img{display:block;max-width:min(100%,440px);max-height:540px;object-fit:contain;margin:0 auto;border-radius:10px}.meme-box p{margin:10px 0 0;color:var(--muted);font-size:13px}.transcript{background:#0d0f16;border-radius:12px;padding:13px;color:#d6d9e6;font-size:13px;line-height:1.75;white-space:pre-wrap;overflow-wrap:anywhere}.notice{margin-top:16px;padding:12px 14px;border-radius:12px;background:#242116;border:1px solid #554928;color:#e7dcae;font-size:12px;line-height:1.55}.error{background:#2b171b;border-color:#67303a;color:#ffc7ce}.foot{text-align:center;color:#767b90;font-size:12px;line-height:1.6;margin-top:25px}.foot a{color:#cdd2e6}.smallprint{color:#858ba0;font-size:11px;line-height:1.5;margin-top:10px}.hidden{display:none!important}
+@media(max-width:740px){.wrap{width:min(620px,92vw);padding-top:18px}.top{margin-bottom:29px}.grid{grid-template-columns:1fr}.hero h2{font-size:clamp(39px,12vw,58px)}.card{border-radius:18px}.drop{min-height:170px}.textin{min-height:160px}.resulttop{gap:12px}.score{width:84px;height:84px;border-width:6px;font-size:24px}.actions .btn{flex:1}.meme-box{padding:10px}.meme-box img{max-height:440px}}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<main class="wrap">
+  <header class="top"><div class="logo" aria-hidden="true">β</div><div><div class="eyebrow">Análise de conversa por IA</div><h1>Sobrou pro Beta?</h1></div></header>
+  <section class="hero">
+    <h2>O print fala. A IA dá o <span>veredito.</span></h2>
+    <p>Envie uma captura de tela ou cole a conversa. A IA vai analisar os sinais, explicar o resultado e escolher um meme à altura da situação. 😂</p>
+    <div class="tags"><span class="tag">📱 Mobile e desktop</span><span class="tag">🧠 IA de verdade</span><span class="tag">😂 6 memes originais</span></div>
+  </section>
+  <section class="grid" aria-label="Enviar conversa">
+    <div class="card">
+      <h3>📸 Envie o print</h3><p class="sub">Escolha uma captura de tela da conversa. A imagem será enviada ao serviço de IA para análise.</p>
+      <label class="drop" id="drop">
+        <input type="file" id="imageFile" accept="image/png,image/jpeg,image/webp" aria-label="Selecionar print da conversa">
+        <div class="drop-content" id="dropContent"><div class="emoji">⬆️</div><strong>Toque ou clique para escolher</strong><small>PNG, JPG ou WebP · até 8 MB</small></div>
+      </label>
+      <img class="preview" id="preview" alt="Prévia do print selecionado">
+      <div class="actions"><button class="btn primary" id="imageAnalyze">Analisar print</button><button class="btn secondary hidden" id="removeImage" type="button">Remover</button></div>
+      <p class="smallprint">Dica: oculte nomes, fotos e informações pessoais antes de enviar.</p>
+    </div>
+    <div class="card">
+      <h3>💬 Ou cole a conversa</h3><p class="sub">Se preferir, cole as mensagens. Use rótulos como “Eu:” e “Outra pessoa:” quando souber quem falou.</p>
+      <label class="fieldlabel" for="conversation">CONVERSA</label>
+      <textarea class="textin" id="conversation" placeholder="Eu: Oi, tudo bem?&#10;Outra pessoa: Oi&#10;Eu: Como foi seu dia?&#10;Outra pessoa: Foi legal, e o seu?"></textarea>
+      <div class="actions"><button class="btn primary" id="textAnalyze">Analisar conversa</button><button class="btn secondary" id="sample">Carregar exemplo</button></div>
+    </div>
+  </section>
+  <div class="status" id="status" role="status" aria-live="polite"></div>
+  <section class="result" id="result" aria-live="polite">
+    <div class="resulttop"><div><div class="pill">Veredito da IA</div><h3 id="verdict">Analisando…</h3><p id="summary"></p></div><div class="score" id="score">—<small>/100</small></div></div>
+    <div class="meter" aria-label="Índice de interesse"><span id="meterFill"></span></div>
+    <h4>O que pesou na análise</h4><ul id="reasons"></ul>
+    <h4>O meme do seu resultado</h4><div class="meme-box"><img id="resultMeme" alt="Meme correspondente ao índice"><p id="memeCaption"></p></div>
+    <h4>Transcrição identificada</h4><div class="transcript" id="transcript"></div>
+    <div class="notice">O índice é uma estimativa humorística baseada apenas no conteúdo enviado. Não é uma medida científica de sentimentos e pode errar o contexto ou quem falou.</div>
+  </section>
+  <footer class="foot">Sobrou pro Beta? • Feito para celular e computador.<br>Ao analisar, o conteúdo enviado é processado pelo serviço de IA configurado pelo responsável pelo site. Evite enviar informações sensíveis.</footer>
+</main>
+<script>
+const MEMES = [
+  {src:"/memes/brutal.jpg",caption:"BRUTAL — sobrou nada pro beta."},
+  {src:"/memes/nao_sobrou.jpg",caption:"Meu Deus do céu… não sobrou nada."},
+  {src:"/memes/nada_xdxd.jpg",caption:"Nada xdxd."},
+  {src:"/memes/gato.jpg",caption:"O gato já está apontando os fatos. 🫵"},
+  {src:"/memes/especialista.jpg",caption:"É o especialista, não tem jeito. 🔥"},
+  {src:"/memes/jarvis.jpg",caption:"Jarvis, que coisa linda. 🥹"}
+];
+const fileInput=document.getElementById('imageFile'), preview=document.getElementById('preview'), drop=document.getElementById('drop'), dropContent=document.getElementById('dropContent');
+let selectedImage=null,lastMemeIndex=-1;
+const statusEl=document.getElementById('status');
+fileInput.addEventListener('change',()=>{
+ const f=fileInput.files&&fileInput.files[0]; if(!f)return;
+ if(!['image/png','image/jpeg','image/webp'].includes(f.type)){showError('Escolha uma imagem PNG, JPG ou WebP.');fileInput.value='';return;}
+ if(f.size>8*1024*1024){showError('A imagem deve ter no máximo 8 MB.');fileInput.value='';return;}
+ selectedImage=f;preview.src=URL.createObjectURL(f);preview.style.display='block';drop.style.minHeight='auto';dropContent.style.display='none';document.getElementById('removeImage').classList.remove('hidden');clearError();
+});
+document.getElementById('removeImage').addEventListener('click',()=>{selectedImage=null;fileInput.value='';preview.removeAttribute('src');preview.style.display='none';drop.style.minHeight='205px';dropContent.style.display='block';document.getElementById('removeImage').classList.add('hidden');});
+function setBusy(b, message='A IA está analisando a conversa…'){
+ ['imageAnalyze','textAnalyze','sample'].forEach(id=>document.getElementById(id).disabled=b);
+ statusEl.classList.toggle('show',b||!!message);statusEl.classList.toggle('error',false);
+ statusEl.innerHTML=b?'<span class="spinner"></span>'+message:message;
+}
+function clearError(){statusEl.classList.remove('error');statusEl.classList.remove('show');statusEl.textContent='';}
+function showError(msg){statusEl.classList.add('show','error');statusEl.textContent=msg;}
+function memeFor(score){
+ let range=score<=30?[0,1]:score<=70?[2,3]:[4,5];
+ let idx=range[Math.floor(Math.random()*range.length)];
+ if(range.length>1 && idx===lastMemeIndex)idx=range[0]+range[1]-idx;
+ lastMemeIndex=idx;return MEMES[idx];
+}
+function safeText(el, value){el.textContent=String(value??'');}
+function renderResult(data){
+ const score=Math.max(0,Math.min(100,Number(data.score)||0));
+ safeText(document.getElementById('verdict'),data.verdict||'Resultado da análise');
+ safeText(document.getElementById('summary'),data.summary||'');
+ safeText(document.getElementById('score'),score);
+ const scoreEl=document.getElementById('score');scoreEl.innerHTML='';scoreEl.append(document.createTextNode(String(score)));const small=document.createElement('small');small.textContent='/100';scoreEl.append(small);
+ document.getElementById('meterFill').style.width=score+'%';
+ const reasonsEl=document.getElementById('reasons');reasonsEl.replaceChildren();
+ (Array.isArray(data.reasons)?data.reasons:[]).slice(0,6).forEach(reason=>{const li=document.createElement('li');li.textContent=reason;reasonsEl.append(li);});
+ const meme=memeFor(score);document.getElementById('resultMeme').src=meme.src;document.getElementById('resultMeme').alt=meme.caption;safeText(document.getElementById('memeCaption'),meme.caption);
+ safeText(document.getElementById('transcript'),data.transcript||'A IA não conseguiu gerar uma transcrição organizada.');
+ const result=document.getElementById('result');result.style.display='block';result.scrollIntoView({behavior:'smooth',block:'start'});
+}
+async function analyze(payload){
+ clearError();document.getElementById('result').style.display='none';setBusy(true);
+ try{
+  const res=await fetch('/.netlify/functions/analyze',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+  const data=await res.json().catch(()=>({error:'O servidor retornou uma resposta inválida.'}));
+  if(!res.ok)throw new Error(data.error||'Não foi possível analisar. Tente novamente.');
+  renderResult(data);setBusy(false,'Análise concluída. Quer testar outra conversa?');statusEl.classList.add('show');
+ }catch(e){setBusy(false,'');showError(e.message||'Falha de conexão. Verifique a publicação do site e tente novamente.');}
+}
+document.getElementById('imageAnalyze').addEventListener('click',async()=>{
+ if(!selectedImage){showError('Selecione um print primeiro.');return;}
+ const reader=new FileReader();reader.onload=()=>analyze({image:reader.result});reader.onerror=()=>showError('Não foi possível ler essa imagem.');
+ reader.readAsDataURL(selectedImage);
+});
+document.getElementById('textAnalyze').addEventListener('click',()=>{
+ const text=document.getElementById('conversation').value.trim();if(!text){showError('Cole uma conversa antes de analisar.');return;}analyze({text});
+});
+document.getElementById('sample').addEventListener('click',()=>{
+ document.getElementById('conversation').value='Pessoa 1: Oi\\nPessoa 2: oi\\nPessoa 1: tudo bem?\\nPessoa 2: uh um\\nPessoa 1: não vai perguntar se estou bem?\\nPessoa 2: não, não quero saber';
+ clearError();
+});
+</script>
+</body>
+</html>
