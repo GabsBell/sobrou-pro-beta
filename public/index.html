@@ -63,6 +63,36 @@ const MEMES = [
 const fileInput=document.getElementById('imageFile'), preview=document.getElementById('preview'), drop=document.getElementById('drop'), dropContent=document.getElementById('dropContent');
 let selectedImage=null,lastMemeIndex=-1;
 const statusEl=document.getElementById('status');
+
+// Estimativa local: o site não consegue consultar diretamente a cota global da chave Gemini.
+const DAILY_LIMIT=20, MINUTE_LIMIT=5;
+const USAGE_KEY='serasesobra_usage_v1';
+function getUsage(){
+ const now=Date.now();
+ let usage={day:new Date().toLocaleDateString('en-CA'),daily:0,minute:[]};
+ try{
+  const saved=JSON.parse(localStorage.getItem(USAGE_KEY)||'null');
+  if(saved && saved.day===usage.day){usage.daily=Number(saved.daily)||0;usage.minute=Array.isArray(saved.minute)?saved.minute:[];}
+ }catch(e){}
+ usage.minute=usage.minute.filter(t=>Number(t)>now-60000);
+ return usage;
+}
+function saveUsage(usage){try{localStorage.setItem(USAGE_KEY,JSON.stringify(usage));}catch(e){}}
+function updateUsageCounter(){
+ const usage=getUsage();
+ const dailyLeft=Math.max(0,DAILY_LIMIT-usage.daily);
+ const minuteLeft=Math.max(0,MINUTE_LIMIT-usage.minute.length);
+ const el=document.getElementById('usageCounter');
+ if(el) el.textContent=`Estimativa neste navegador: ${dailyLeft}/${DAILY_LIMIT} usos diários e ${minuteLeft}/${MINUTE_LIMIT} usos por minuto restantes`;
+}
+function recordUsageAttempt(){
+ const usage=getUsage(), now=Date.now();
+ usage.daily+=1;
+ usage.minute.push(now);
+ saveUsage(usage);
+ updateUsageCounter();
+}
+updateUsageCounter();
 fileInput.addEventListener('change',()=>{
  const f=fileInput.files&&fileInput.files[0]; if(!f)return;
  if(!['image/png','image/jpeg','image/webp'].includes(f.type)){showError('Escolha uma imagem PNG, JPG ou WebP.');fileInput.value='';return;}
@@ -131,6 +161,7 @@ function renderResult(data){
  const result=document.getElementById('result');result.style.display='block';result.scrollIntoView({behavior:'smooth',block:'start'});
 }
 async function analyze(payload){
+ recordUsageAttempt();
  clearError();document.getElementById('result').style.display='none';setBusy(true);
  try{
   const res=await fetch('/.netlify/functions/analyze',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
