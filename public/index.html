@@ -168,7 +168,20 @@ async function analyze(payload){
   const data=await res.json().catch(()=>({error:'O servidor retornou uma resposta inválida.'}));
   if(!res.ok)throw new Error(data.error||'Não foi possível analisar. Tente novamente.');
   renderResult(data);setBusy(false,'Análise concluída. Quer testar outra conversa?');statusEl.classList.add('show');
- }catch(e){setBusy(false,'');showError(e.message||'Falha de conexão. Verifique a publicação do site e tente novamente.');}
+ }catch(e){
+  setBusy(false,'');
+  const errorText=String(e.message||'');
+  const normalized=errorText.toLowerCase();
+  let friendlyMessage=errorText||'😭 Deu ruim, Beta! A análise não rolou dessa vez. Tenta de novo daqui a pouco.';
+  if(normalized.includes('429')||normalized.includes('quota')||normalized.includes('limite de uso')||normalized.includes('limite de taxa')||normalized.includes('atingiu o limite')){
+   friendlyMessage='💀 Sobrou nada pro Beta! O Gemini já gastou toda a cota e te deixou no vácuo. Volta mais tarde pra tentar salvar esse coração.';
+  }else if(normalized.includes('503')||normalized.includes('504')||normalized.includes('sobrecarregado')||normalized.includes('unavailable')){
+   friendlyMessage='🥴 Até a IA arregou, Beta! Tá todo mundo pedindo análise ao mesmo tempo. Respira e tenta de novo daqui a pouco.';
+  }else if(normalized.includes('failed to fetch')||normalized.includes('networkerror')){
+   friendlyMessage='📡 Ih, Beta… nem a conexão quis colaborar contigo. Confere a internet e tenta mais uma vez.';
+  }
+  showError(friendlyMessage);
+ }
 }
 document.getElementById('imageAnalyze').addEventListener('click',async()=>{
  if(!selectedImage){showError('Selecione um print primeiro.');return;}
