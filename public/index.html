@@ -69,7 +69,37 @@ fileInput.addEventListener('change',()=>{
  if(f.size>8*1024*1024){showError('A imagem deve ter no máximo 8 MB.');fileInput.value='';return;}
  selectedImage=f;preview.src=URL.createObjectURL(f);preview.style.display='block';drop.style.minHeight='auto';dropContent.style.display='none';document.getElementById('removeImage').classList.remove('hidden');clearError();
 });
-document.getElementById('removeImage').addEventListener('click',()=>{selectedImage=null;fileInput.value='';preview.removeAttribute('src');preview.style.display='none';drop.style.minHeight='205px';dropContent.style.display='block';document.getElementById('removeImage').classList.add('hidden');});
+const removeButton=document.getElementById('removeImage');
+function resetAnalysis(){
+ selectedImage=null;
+ fileInput.value='';
+ preview.removeAttribute('src');
+ preview.style.display='none';
+ drop.style.display='flex';
+ drop.style.minHeight='205px';
+ dropContent.style.display='block';
+ document.getElementById('conversation').value='';
+ document.getElementById('result').style.display='none';
+ removeButton.textContent='Remover';
+ removeButton.classList.add('hidden');
+ clearError();
+ window.scrollTo({top:0,behavior:'smooth'});
+}
+removeButton.addEventListener('click',()=>{
+ if(removeButton.textContent==='Nova análise'){
+  resetAnalysis();
+  return;
+ }
+ selectedImage=null;
+ fileInput.value='';
+ preview.removeAttribute('src');
+ preview.style.display='none';
+ drop.style.display='flex';
+ drop.style.minHeight='205px';
+ dropContent.style.display='block';
+ removeButton.classList.add('hidden');
+ clearError();
+});
 function setBusy(b, message='A IA está analisando a conversa…'){
  ['imageAnalyze','textAnalyze','sample'].forEach(id=>document.getElementById(id).disabled=b);
  statusEl.classList.toggle('show',b||!!message);statusEl.classList.toggle('error',false);
@@ -95,6 +125,9 @@ function renderResult(data){
  (Array.isArray(data.reasons)?data.reasons:[]).slice(0,6).forEach(reason=>{const li=document.createElement('li');li.textContent=reason;reasonsEl.append(li);});
  const meme=memeFor(score);document.getElementById('resultMeme').src=meme.src;document.getElementById('resultMeme').alt=meme.caption;safeText(document.getElementById('memeCaption'),meme.caption);
  safeText(document.getElementById('transcript'),data.transcript||'A IA não conseguiu gerar uma transcrição organizada.');
+ drop.style.display='none';
+ removeButton.textContent='Nova análise';
+ removeButton.classList.remove('hidden');
  const result=document.getElementById('result');result.style.display='block';result.scrollIntoView({behavior:'smooth',block:'start'});
 }
 async function analyze(payload){
