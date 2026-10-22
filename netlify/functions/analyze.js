@@ -22,12 +22,12 @@ exports.handler = async (event) => {
     return reply(405, { error: "Método não permitido." });
   }
 
-  const apiKey = process.env.GEMINI_API_KEY;
+  const apiKey = process.env.GROQ_API_KEY;
 
   if (!apiKey) {
     return reply(500, {
       error:
-        "A chave do Gemini não está configurada no Netlify.",
+        "A chave da Groq não está configurada na Netlify. Confira GROQ_API_KEY nas variáveis de ambiente.",
     });
   }
 
@@ -59,26 +59,22 @@ exports.handler = async (event) => {
     });
   }
 
-  let imagePart = null;
+  if (image && image.length > MAX_IMAGE_CHARS) {
+    return reply(413, {
+      error:
+        "Imagem muito grande. Use PNG, JPG ou WebP de até 8 MB.",
+    });
+  }
 
-  if (image) {
-    const match = image.match(
-      /^data:image\/(png|jpeg|webp);base64,([A-Za-z0-9+/]+={0,2})$/
-    );
-
-    if (!match || image.length > MAX_IMAGE_CHARS) {
-      return reply(400, {
-        error:
-          "Imagem inválida ou muito grande. Use PNG, JPG ou WebP de até 8 MB.",
-      });
-    }
-
-    imagePart = {
-      inline_data: {
-        mime_type: `image/${match[1]}`,
-        data: match[2],
-      },
-    };
+  if (
+    image &&
+    !/^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/]+={0,2}$/.test(
+      image
+    )
+  ) {
+    return reply(400, {
+      error: "Imagem inválida. Use PNG, JPG ou WebP.",
+    });
   }
 
   const instructions = `
@@ -92,11 +88,16 @@ Avalie sinais observáveis de interesse, iniciativa,
 reciprocidade, tom, perguntas, continuidade e sinais
 explícitos de desinteresse.
 
-Respostas curtas podem ter várias explicações.
+Considere o contexto completo, a ordem das mensagens,
+emojis, ironia e respostas anteriores. Não interprete
+automaticamente uma resposta curta como rejeição.
+Não confunda brincadeira, amizade e interesse romântico
+sem considerar as evidências disponíveis.
+
 Seja engraçado, direto e respeitoso. Não humilhe ninguém
 nem incentive insistência diante de rejeição clara.
 
-Retorne somente JSON válido com estes campos:
+Retorne somente um objeto JSON válido com estes campos:
 {
   "score": número inteiro de 0 a 100,
   "verdict": "frase curta e engraçada em português brasileiro",
@@ -119,8 +120,9 @@ Em texto digitado, preserve os rótulos originais.
 Responda em português brasileiro.
 `;
 
-  const parts = [
+  const userContent = [
     {
+      type: "text",
       text:
         instructions +
         (text
@@ -129,61 +131,41 @@ Responda em português brasileiro.
     },
   ];
 
-  if (imagePart) {
-    parts.push(imagePart);
+  if (image) {
+    userContent.push({
+      type: "image_url",
+      image_url: { url: image },
+    });
   }
 
   const requestBody = {
-    contents: [
+    model: "qwen/qwen3.8-27b",
+    messages: [
       {
         role: "user",
-        parts,
+        content: userContent,
       },
     ],
-    generationConfig: {
-      responseMimeType: "application/json",
-      responseSchema: {
-        type: "OBJECT",
-        properties: {
-          score: { type: "INTEGER" },
-          verdict: { type: "STRING" },
-          summary: { type: "STRING" },
-          reasons: {
-            type: "ARRAY",
-            items: { type: "STRING" },
-          },
-          transcript: { type: "STRING" },
-        },
-        required: [
-          "score",
-          "verdict",
-          "summary",
-          "reasons",
-          "transcript",
-        ],
-      },
-    },
+    response_format: { type: "json_object" },
+    temperature: 0.4,
+    max_completion_tokens: 1800,
+    reasoning_effort: "none",
   };
 
-  const retryableStatuses = new Set([
-    429, 500, 502, 503, 504,
-  ]);
-
   let lastStatus = 0;
-  let lastMessage = "";
 
   for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
     try {
       const upstream = await fetch(
-        "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent",
+        "https://api.groq.com/openai/v1/chat/completions",
         {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            "x-goog-api-key": apiKey,
+            Authorization: `Bearer ${apiKey}`,
           },
           body: JSON.stringify(requestBody),
-          signal: AbortSignal.timeout(20000),
+          signal: AbortSignal.timeout(25000),
         }
       );
 
@@ -191,89 +173,80 @@ Responda em português brasileiro.
 
       if (!upstream.ok) {
         lastStatus = upstream.status;
-        lastMessage =
-          result.error?.message || "Erro desconhecido do Gemini.";
 
         console.error(
-          "Gemini API error:",
+          "Groq API error:",
           lastStatus,
-          lastMessage,
+          result.error?.message || "Erro desconhecido",
           "Tentativa:",
           attempt
         );
 
         if (
-          retryableStatuses.has(lastStatus) &&
+          [500, 502, 503, 504].includes(lastStatus) &&
           attempt < MAX_ATTEMPTS
         ) {
           await sleep(1000 * attempt);
           continue;
         }
 
-        if (lastStatus === 400) {
-          return reply(502, {
-            error:
-              "O Gemini não aceitou a solicitação. Tente outro print ou uma imagem menor.",
-          });
-        }
-
         if (lastStatus === 401 || lastStatus === 403) {
           return reply(502, {
             error:
-              "A chave do Gemini foi recusada ou não tem permissão. Confira a configuração no Netlify.",
+              "A chave da Groq foi recusada ou não tem permissão. Confira GROQ_API_KEY na Netlify.",
           });
         }
 
         if (lastStatus === 429) {
-          return reply(502, {
+          return reply(429, {
             error:
-              "O Gemini atingiu o limite de uso. Aguarde um pouco e tente novamente.",
+              "A Groq atingiu o limite de uso. Aguarde a cota liberar e tente novamente.",
           });
         }
 
-        if (lastStatus === 503 || lastStatus === 504) {
+        if ([500, 502, 503, 504].includes(lastStatus)) {
           return reply(502, {
             error:
-              "O Gemini está sobrecarregado no momento. Tentamos novamente, mas o serviço continua indisponível. Aguarde um pouco e tente outra vez.",
+              "A Groq está temporariamente indisponível. Aguarde um pouco e tente novamente.",
+          });
+        }
+
+        if (lastStatus === 400) {
+          return reply(502, {
+            error:
+              "A Groq não aceitou a solicitação. Tente outro print ou uma imagem menor.",
           });
         }
 
         return reply(502, {
           error:
-            "O Gemini não conseguiu concluir a análise. Tente novamente em instantes.",
+            "Não foi possível concluir a análise com a Groq. Tente novamente.",
         });
       }
 
-      const outputText = (
-        result.candidates?.[0]?.content?.parts || []
-      )
-        .map((part) => part.text || "")
-        .join("\n")
-        .trim();
+      const outputText =
+        result.choices?.[0]?.message?.content?.trim();
 
       if (!outputText) {
-        console.error(
-          "Resposta vazia do Gemini:",
-          JSON.stringify(result).slice(0, 1500)
-        );
+        console.error("Resposta vazia da Groq.");
 
         return reply(502, {
           error:
-            "O Gemini retornou uma resposta vazia. Tente novamente.",
+            "A Groq retornou uma resposta vazia. Tente novamente.",
         });
       }
 
       let parsed;
 
       try {
-        const cleaned = outputText
-          .replace(/^```(?:json)?\s*/i, "")
-          .replace(/\s*```$/, "");
-
-        parsed = JSON.parse(cleaned);
+        parsed = JSON.parse(
+          outputText
+            .replace(/^```(?:json)?\s*/i, "")
+            .replace(/\s*```$/, "")
+        );
       } catch {
         console.error(
-          "Não foi possível interpretar o JSON do Gemini:",
+          "JSON inválido recebido da Groq:",
           outputText.slice(0, 1000)
         );
 
@@ -287,21 +260,17 @@ Responda em português brasileiro.
         typeof parsed.score !== "number" ||
         !Array.isArray(parsed.reasons)
       ) {
-        console.error("Resposta do Gemini com campos inválidos.");
-
         return reply(502, {
           error:
             "A resposta da IA está incompleta. Tente novamente.",
         });
       }
 
-      const score = Math.max(
-        0,
-        Math.min(100, Math.round(parsed.score))
-      );
-
       return reply(200, {
-        score,
+        score: Math.max(
+          0,
+          Math.min(100, Math.round(parsed.score))
+        ),
         verdict: String(
           parsed.verdict || "Veredito inconclusivo"
         ).slice(0, 180),
@@ -314,11 +283,9 @@ Responda em português brasileiro.
         ).slice(0, 12000),
       });
     } catch (error) {
-      lastMessage = error?.message || "Erro de conexão";
-
       console.error(
-        "Falha na comunicação com o Gemini:",
-        lastMessage,
+        "Falha de comunicação com a Groq:",
+        error?.message || "Erro de conexão",
         "Tentativa:",
         attempt
       );
@@ -330,14 +297,8 @@ Responda em português brasileiro.
     }
   }
 
-  console.error(
-    "Análise não concluída após as tentativas:",
-    lastStatus,
-    lastMessage
-  );
-
   return reply(502, {
     error:
-      "Não foi possível concluir a análise após algumas tentativas. O Gemini pode estar ocupado ou instável. Aguarde um pouco e tente novamente.",
+      "Não foi possível concluir a análise após algumas tentativas. Aguarde e tente novamente.",
   });
 };
