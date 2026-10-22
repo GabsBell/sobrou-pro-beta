@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="theme-color" content="#101116">
-<meta name="description" content="Envie um print, receba uma análise de conversa por IA e descubra: sobrou pro beta?">
+<meta name="description" content="Analise conversas e descubra: sobrou pro beta? O modo local funciona sem cota de API.">
 <title>Sobrou pro Beta?</title>
 <style>
 :root{color-scheme:dark;--bg:#0b0c10;--panel:#151720;--panel2:#1d2030;--text:#f5f6fb;--muted:#a5a9bb;--accent:#b8ff5c;--pink:#ff6b9a;--line:#2a2d3c;--danger:#ff7b7b}
@@ -19,12 +19,12 @@ button,input,textarea{font:inherit}button{touch-action:manipulation}.wrap{width:
   <header class="top"><div class="logo" aria-hidden="true">β</div><div><div class="eyebrow">Análise de conversa por IA</div><h1>Sobrou pro Beta?</h1></div></header>
   <section class="hero">
     <h2>O print fala. A IA dá o <span>veredito.</span></h2>
-    <p>Envie uma captura de tela ou cole a conversa. A IA vai analisar os sinais, explicar o resultado e escolher um meme à altura da situação. 😂</p>
+    <p>Envie um print ou cole a conversa. A análise tenta usar o serviço online; se a cota estiver indisponível, o site pode fazer uma análise local simplificada. 😂</p>
     <div class="tags"><span class="tag">📱 Mobile e desktop</span><span class="tag">🧠 IA de verdade</span><span class="tag">😂 6 memes originais</span></div>
   </section>
   <section class="grid" aria-label="Enviar conversa">
     <div class="card">
-      <h3>📸 Envie o print</h3><p class="sub">Escolha uma captura de tela da conversa. A imagem será enviada ao serviço de IA para análise.</p>
+      <h3>📸 Envie o print</h3><p class="sub">Escolha um print. Se o serviço online estiver indisponível, tentaremos extrair o texto no navegador para uma análise local simplificada.</p>
       <label class="drop" id="drop">
         <input type="file" id="imageFile" accept="image/png,image/jpeg,image/webp" aria-label="Selecionar print da conversa">
         <div class="drop-content" id="dropContent"><div class="emoji">⬆️</div><strong>Toque ou clique para escolher</strong><small>PNG, JPG ou WebP · até 8 MB</small></div>
@@ -42,12 +42,12 @@ button,input,textarea{font:inherit}button{touch-action:manipulation}.wrap{width:
   </section>
   <div class="status" id="status" role="status" aria-live="polite"></div>
   <section class="result" id="result" aria-live="polite">
-    <div class="resulttop"><div><div class="pill">Veredito da IA</div><h3 id="verdict">Analisando…</h3><p id="summary"></p></div><div class="score" id="score">—<small>/100</small></div></div>
+    <div class="resulttop"><div><div class="pill" id="resultMode">Veredito da análise</div><h3 id="verdict">Analisando…</h3><p id="summary"></p></div><div class="score" id="score">—<small>/100</small></div></div>
     <div class="meter" aria-label="Índice de interesse"><span id="meterFill"></span></div>
     <h4>O que pesou na análise</h4><ul id="reasons"></ul>
     <h4>O meme do seu resultado</h4><div class="meme-box"><img id="resultMeme" alt="Meme correspondente ao índice"><p id="memeCaption"></p></div>
     <h4>Transcrição identificada</h4><div class="transcript" id="transcript"></div>
-    <div class="notice">O índice é uma estimativa humorística baseada apenas no conteúdo enviado. Não é uma medida científica de sentimentos e pode errar o contexto ou quem falou.</div>
+    <div class="notice" id="analysisNotice">O índice é uma estimativa humorística baseada apenas no conteúdo enviado. Não é uma medida científica de sentimentos e pode errar o contexto ou quem falou.</div>
   </section>
   <footer class="foot">Sobrou pro Beta? • Feito para celular e computador.<br>Ao analisar, o conteúdo enviado é processado pelo serviço de IA configurado pelo responsável pelo site. Evite enviar informações sensíveis.</footer>
 </main>
@@ -144,10 +144,79 @@ function memeFor(score){
  lastMemeIndex=idx;return MEMES[idx];
 }
 function safeText(el, value){el.textContent=String(value??'');}
+
+// Análise local heurística: não usa Gemini nem consome cota de API.
+// É uma estimativa humorística por palavras/sinais, não uma IA generativa.
+function localAnalyzeText(rawText){
+ const text=String(rawText||'').trim();
+ const lines=text.split(/\n+/).map(s=>s.trim()).filter(Boolean);
+ const lower=text.toLocaleLowerCase('pt-BR');
+ const positive=[
+  ['cantada',/\b(linda|lindo|gat[ao]|perfeita|perfeito|obra de arte|princesa|meu amor|amor da minha vida|casaria|beij|sa[ií]r comigo|date|encontro)\b/gi,12],
+  ['flerte',/\b(flert|cantada|😍|🥰|😘|❤️|💕|😏|😉)\b/gi,9],
+  ['resposta animada',/\b(kkkk+|hahaha+|amei|adorei|sério\?|sério!|finalmente|emocionad[ao])\b/gi,5],
+  ['iniciativa',/\b(vamos|bora|quando você pode|quer sair|vamos sair|me chama|te chamo|quero te ver)\b/gi,10],
+  ['reciprocidade',/\b(e você|e tu|como foi seu dia|como você tá|como tu tá|me conta|também quero|eu também)\b/gi,5]
+ ];
+ const negative=[
+  ['resposta seca',/\b(ok|okay|ata|tá|blz|beleza|uhum|aham|sei|legal)\b/gi,-5],
+  ['desinteresse',/\b(não quero|não tenho interesse|só amizade|como amigo|como amiga|para com isso|me deixa|não insiste)\b/gi,-18],
+  ['encerramento',/\b(tchau|flw|falou|depois vejo|qualquer dia|quem sabe)\b/gi,-4]
+ ];
+ let score=42, reasons=[];
+ for(const [label,regex,points] of positive){
+  const count=(lower.match(regex)||[]).length;
+  if(count){score+=Math.min(count,3)*points;reasons.push(`${label[0].toUpperCase()+label.slice(1)}: foram encontrados ${count} sinal(is).`);}
+ }
+ for(const [label,regex,points] of negative){
+  const count=(lower.match(regex)||[]).length;
+  if(count){score+=Math.max(points*count,-30);reasons.push(`${label[0].toUpperCase()+label.slice(1)}: foram encontrados ${count} sinal(is).`);}
+ }
+ const questions=(text.match(/\?/g)||[]).length;
+ if(questions>=2){score+=8;reasons.push('Há perguntas que podem indicar interesse em manter a conversa.');}
+ if(lines.length>=6){score+=5;reasons.push('A conversa tem várias mensagens, indicando continuidade.');}
+ else if(lines.length<=2){score-=5;reasons.push('Há poucas mensagens para avaliar a reciprocidade.');}
+ score=Math.max(0,Math.min(100,Math.round(score)));
+ let verdict,summary;
+ if(score<=30){verdict='💀 Sobrou nada pro Beta';summary='Os sinais encontrados são mais frios ou indicam pouco espaço para avançar. É só uma leitura automática e pode errar o contexto.';}
+ else if(score<=60){verdict='🤨 Zona de dúvida';summary='Tem sinais mistos. Pode haver abertura, mas ainda não dá para cravar nada só pelo texto.';}
+ else if(score<=80){verdict='👀 Tem jogo!';summary='Apareceram alguns sinais positivos de interesse ou reciprocidade. Vai com calma e observa como a conversa evolui.';}
+ else{verdict='🔥 O Beta tá vivendo';summary='Foram encontrados vários sinais positivos de flerte ou iniciativa. Ainda assim, a pontuação é uma brincadeira, não uma certeza.';}
+ if(!reasons.length) reasons=['Não encontrei palavras-chave claras; o resultado ficou próximo de uma estimativa neutra.'];
+ return {score,verdict,summary,reasons,transcript:text};
+}
+async function loadTesseract(){
+ if(window.Tesseract)return window.Tesseract;
+ await new Promise((resolve,reject)=>{
+  const script=document.createElement('script');
+  script.src='https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js';
+  script.onload=resolve;script.onerror=()=>reject(new Error('Não foi possível carregar o leitor de texto do print.'));
+  document.head.appendChild(script);
+ });
+ return window.Tesseract;
+}
+async function localAnalyzePayload(payload){
+ let text=payload.text||'';
+ if(!text && payload.imageFile){
+  statusEl.classList.add('show');statusEl.classList.remove('error');
+  statusEl.textContent='🧐 A IA online não respondeu. Tentando ler o print no navegador…';
+  const Tesseract=await loadTesseract();
+  const result=await Tesseract.recognize(payload.imageFile,'por', {
+   logger: m=>{if(m.status==='recognizing text')statusEl.textContent=`🧐 Lendo o print localmente… ${Math.round((m.progress||0)*100)}%`;}
+  });
+  text=result.data.text||'';
+ }
+ if(!text.trim())throw new Error('Não consegui ler texto suficiente para analisar. Tente colar a conversa manualmente.');
+ const data=localAnalyzeText(text);
+ data.localMode=true;
+ return data;
+}
 function renderResult(data){
  const score=Math.max(0,Math.min(100,Number(data.score)||0));
  safeText(document.getElementById('verdict'),data.verdict||'Resultado da análise');
  safeText(document.getElementById('summary'),data.summary||'');
+ safeText(document.getElementById('resultMode'),data.localMode?'Análise local sem IA generativa':'Veredito da análise');
+ safeText(document.getElementById('analysisNotice'),data.localMode?'Modo local: resultado calculado por regras e palavras-chave no navegador. Não usa cota do Gemini, mas é menos preciso e pode interpretar mal ironia, contexto ou quem falou.':'O índice é uma estimativa humorística baseada apenas no conteúdo enviado. Não é uma medida científica de sentimentos e pode errar o contexto ou quem falou.');
  safeText(document.getElementById('score'),score);
  const scoreEl=document.getElementById('score');scoreEl.innerHTML='';scoreEl.append(document.createTextNode(String(score)));const small=document.createElement('small');small.textContent='/100';scoreEl.append(small);
  document.getElementById('meterFill').style.width=score+'%';
@@ -161,32 +230,45 @@ function renderResult(data){
  const result=document.getElementById('result');result.style.display='block';result.scrollIntoView({behavior:'smooth',block:'start'});
 }
 async function analyze(payload){
- recordUsageAttempt();
  clearError();document.getElementById('result').style.display='none';setBusy(true);
  try{
-  const res=await fetch('/.netlify/functions/analyze',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
-  const data=await res.json().catch(()=>({error:'O servidor retornou uma resposta inválida.'}));
-  if(!res.ok)throw new Error(data.error||'Não foi possível analisar. Tente novamente.');
-  renderResult(data);setBusy(false,'Análise concluída. Quer testar outra conversa?');statusEl.classList.add('show');
+  // Primeiro tenta a análise online; em caso de falha, cai para o modo local.
+  let data=null, onlineError=null;
+  try{
+   const apiPayload=payload.imageFile?{image:await fileToDataUrl(payload.imageFile)}:payload;
+   recordUsageAttempt();
+   const res=await fetch('/.netlify/functions/analyze',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(apiPayload)});
+   const responseData=await res.json().catch(()=>({error:'O servidor retornou uma resposta inválida.'}));
+   if(!res.ok)throw new Error(responseData.error||'Não foi possível analisar. Tente novamente.');
+   data=responseData;
+  }catch(e){onlineError=e;}
+  if(!data){
+   setBusy(true,'🤖 A análise online não rolou. Tentando o modo local sem cota…');
+   try{
+    data=await localAnalyzePayload(payload);
+   }catch(localError){
+    throw new Error('💀 Sobrou nada pro Beta! A análise online falhou e o modo local não conseguiu ler a conversa. Cole o texto manualmente para tentar sem depender da cota.');
+   }
+  }
+  renderResult(data);
+  setBusy(false,data.localMode?'Análise local concluída — sem gastar cota do Gemini.':'Análise concluída. Quer testar outra conversa?');
+  statusEl.classList.add('show');
  }catch(e){
   setBusy(false,'');
-  const errorText=String(e.message||'');
-  const normalized=errorText.toLowerCase();
-  let friendlyMessage=errorText||'😭 Deu ruim, Beta! A análise não rolou dessa vez. Tenta de novo daqui a pouco.';
-  if(normalized.includes('429')||normalized.includes('quota')||normalized.includes('limite de uso')||normalized.includes('limite de taxa')||normalized.includes('atingiu o limite')){
-   friendlyMessage='💀 Sobrou nada pro Beta! O Gemini já gastou toda a cota e te deixou no vácuo. Volta mais tarde pra tentar salvar esse coração.';
-  }else if(normalized.includes('503')||normalized.includes('504')||normalized.includes('sobrecarregado')||normalized.includes('unavailable')){
-   friendlyMessage='🥴 Até a IA arregou, Beta! Tá todo mundo pedindo análise ao mesmo tempo. Respira e tenta de novo daqui a pouco.';
-  }else if(normalized.includes('failed to fetch')||normalized.includes('networkerror')){
-   friendlyMessage='📡 Ih, Beta… nem a conexão quis colaborar contigo. Confere a internet e tenta mais uma vez.';
-  }
-  showError(friendlyMessage);
+  showError(e.message||'😭 Deu ruim, Beta! A análise não rolou dessa vez. Tenta de novo daqui a pouco.');
  }
+}
+function fileToDataUrl(file){
+ return new Promise((resolve,reject)=>{
+  const reader=new FileReader();
+  reader.onload=()=>resolve(reader.result);
+  reader.onerror=()=>reject(new Error('Não foi possível ler a imagem.'));
+  reader.readAsDataURL(file);
+ });
 }
 document.getElementById('imageAnalyze').addEventListener('click',async()=>{
  if(!selectedImage){showError('Selecione um print primeiro.');return;}
- const reader=new FileReader();reader.onload=()=>analyze({image:reader.result});reader.onerror=()=>showError('Não foi possível ler essa imagem.');
- reader.readAsDataURL(selectedImage);
+ analyze({imageFile:selectedImage});
 });
 document.getElementById('textAnalyze').addEventListener('click',()=>{
  const text=document.getElementById('conversation').value.trim();if(!text){showError('Cole uma conversa antes de analisar.');return;}analyze({text});
