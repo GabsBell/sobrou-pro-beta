@@ -151,38 +151,64 @@ function localAnalyzeText(rawText){
  const text=String(rawText||'').trim();
  const lines=text.split(/\n+/).map(s=>s.trim()).filter(Boolean);
  const lower=text.toLocaleLowerCase('pt-BR');
- const positive=[
-  ['cantada',/\b(linda|lindo|gat[ao]|perfeita|perfeito|obra de arte|princesa|meu amor|amor da minha vida|casaria|beij|sa[ií]r comigo|date|encontro)\b/gi,12],
-  ['flerte',/\b(flert|cantada|😍|🥰|😘|❤️|💕|😏|😉)\b/gi,9],
-  ['resposta animada',/\b(kkkk+|hahaha+|amei|adorei|sério\?|sério!|finalmente|emocionad[ao])\b/gi,5],
-  ['iniciativa',/\b(vamos|bora|quando você pode|quer sair|vamos sair|me chama|te chamo|quero te ver)\b/gi,10],
-  ['reciprocidade',/\b(e você|e tu|como foi seu dia|como você tá|como tu tá|me conta|também quero|eu também)\b/gi,5]
- ];
- const negative=[
-  ['resposta seca',/\b(ok|okay|ata|tá|blz|beleza|uhum|aham|sei|legal)\b/gi,-5],
-  ['desinteresse',/\b(não quero|não tenho interesse|só amizade|como amigo|como amiga|para com isso|me deixa|não insiste)\b/gi,-18],
-  ['encerramento',/\b(tchau|flw|falou|depois vejo|qualquer dia|quem sabe)\b/gi,-4]
- ];
- let score=42, reasons=[];
- for(const [label,regex,points] of positive){
-  const count=(lower.match(regex)||[]).length;
-  if(count){score+=Math.min(count,3)*points;reasons.push(`${label[0].toUpperCase()+label.slice(1)}: foram encontrados ${count} sinal(is).`);}
+ const reasons=[];
+ let score=50, verdictType='mixed', confidence='moderada';
+ const labeled=lines.map(line=>{
+  const m=line.match(/^(eu|outra pessoa|ele|ela|pessoa\s*\d+|contato|crush)\s*:\s*(.+)$/iu);
+  return m?{speaker:m[1].toLocaleLowerCase('pt-BR'),message:m[2]}:null;
+ }).filter(Boolean);
+ const hasLabels=labeled.length>=2;
+ const messages=(hasLabels?labeled.map(x=>x.message):lines).map(x=>x.toLocaleLowerCase('pt-BR'));
+ const recent=messages.slice(-4).join(' ');
+ const last=messages[messages.length-1]||'';
+ const isReject=/(^|\b)(não|nao|nem pensar|não quero|nao quero|só amizade|so amizade|como amigo|como amiga|não tenho interesse|nao tenho interesse|para com isso|me deixa)(\b|$)/i.test(recent);
+ const hearts=(recent.match(/😍|🥰|😘|❤️|💕|💖|💘|💗|💓|🫶/gu)||[]).length;
+ const laughs=(recent.match(/kkkk+|hahaha+|rsrs+/gi)||[]).length;
+ const flirt=/\b(coração|coracao|lindo|linda|gat[ao]|beij|amor|cantada|destino|ficar comigo|sair comigo|se conhecer|te achei|caminho pro seu coração|caminho pro seu coracao|só sobrou eu|so sobrou eu)\b/i.test(lower);
+ const leaving=/(saiu do grupo|saiu|left the group|deixou o grupo)/i.test(recent);
+ if(isReject){
+  score=0; verdictType='reject'; confidence='alta';
+  reasons.push('A resposta contém uma recusa ou uma frase clara de desinteresse.');
+  if(laughs) reasons.push('Risadas podem suavizar o tom, mas não anulam a rejeição.');
+ }else if(/(pegar um desvio|pegue um desvio|vai ter que pegar|caminho fechado|passa longe|nem vem|sonha)/i.test(recent)){
+  score=8; verdictType='reject'; confidence='alta';
+  reasons.push('A resposta usa uma expressão que recusa ou desvia da aproximação romântica.');
+  if(laughs) reasons.push('O “kkkk” deixa a resposta bem-humorada, mas não transforma o fora em reciprocidade.');
+ }else if(hearts>=2){
+  score=95; verdictType='positive'; confidence='alta';
+  reasons.push('A resposta contém vários emojis de afeto/olhos de coração, um sinal fortemente positivo nesse contexto.');
+  if(flirt) reasons.push('Os emojis aparecem em resposta a uma cantada ou aproximação romântica.');
+ }else if(leaving && flirt){
+  score=5; verdictType='negative'; confidence='moderada';
+  reasons.push('A pessoa saiu logo depois da investida; no contexto da brincadeira, é um sinal fortemente desfavorável.');
+ }else{
+  if(flirt){score+=8;reasons.push('Foi identificada uma cantada, mas isso mede a iniciativa de quem a enviou, não a reciprocidade.');}
+  if(/\b(também|tambem|quero sim|bora|vamos|me chama|quero te ver|também te acho|tambem te acho)\b/i.test(recent)){
+   score+=20;reasons.push('Há uma resposta que pode indicar reciprocidade ou vontade de continuar a aproximação.');
+  }
+  if(/\b(quem sabe|talvez|depois vejo|qualquer dia|vamos ver)\b/i.test(last)){
+   score-=8;reasons.push('A resposta é evasiva e não confirma interesse.');
+  }
+  if(laughs) reasons.push('Risadas sozinhas não significam reciprocidade; é preciso olhar o conteúdo da resposta.');
+  if(!hasLabels) reasons.push('Os falantes não estão identificados com clareza; a ordem do texto pode confundir quem enviou cada mensagem.');
+  confidence=hasLabels?'moderada':'baixa';
  }
- for(const [label,regex,points] of negative){
-  const count=(lower.match(regex)||[]).length;
-  if(count){score+=Math.max(points*count,-30);reasons.push(`${label[0].toUpperCase()+label.slice(1)}: foram encontrados ${count} sinal(is).`);}
- }
- const questions=(text.match(/\?/g)||[]).length;
- if(questions>=2){score+=8;reasons.push('Há perguntas que podem indicar interesse em manter a conversa.');}
- if(lines.length>=6){score+=5;reasons.push('A conversa tem várias mensagens, indicando continuidade.');}
- else if(lines.length<=2){score-=5;reasons.push('Há poucas mensagens para avaliar a reciprocidade.');}
  score=Math.max(0,Math.min(100,Math.round(score)));
  let verdict,summary;
- if(score<=30){verdict='💀 Sobrou nada pro Beta';summary='Os sinais encontrados são mais frios ou indicam pouco espaço para avançar. É só uma leitura automática e pode errar o contexto.';}
- else if(score<=60){verdict='🤨 Zona de dúvida';summary='Tem sinais mistos. Pode haver abertura, mas ainda não dá para cravar nada só pelo texto.';}
- else if(score<=80){verdict='👀 Tem jogo!';summary='Apareceram alguns sinais positivos de interesse ou reciprocidade. Vai com calma e observa como a conversa evolui.';}
- else{verdict='🔥 O Beta tá vivendo';summary='Foram encontrados vários sinais positivos de flerte ou iniciativa. Ainda assim, a pontuação é uma brincadeira, não uma certeza.';}
- if(!reasons.length) reasons=['Não encontrei palavras-chave claras; o resultado ficou próximo de uma estimativa neutra.'];
+ if(verdictType==='reject'||score<=15){
+  verdict='💀 SOBROU NADA PRO BETA';
+  summary='A resposta contém um sinal claro de rejeição ou um desfecho muito desfavorável para a investida.';
+ }else if(score<=35){
+  verdict='🥶 O BETA TOMOU GELO'; summary='Os sinais disponíveis são frios ou desfavoráveis. Não apareceu reciprocidade clara.';
+ }else if(score<=60){
+  verdict='🤨 ZONA DE DÚVIDA'; summary='Há sinais mistos ou pouco contexto. Não dá para afirmar que a outra pessoa correspondeu.';
+ }else if(score<=80){
+  verdict='👀 TEM JOGO!'; summary='Há alguns sinais positivos, mas vale observar se a outra pessoa também toma iniciativa.';
+ }else{
+  verdict='❤️ SOBROU PRO ALFA!'; summary='A resposta apresenta sinais positivos de receptividade ou reciprocidade, embora isso não confirme intenção de relacionamento.';
+ }
+ if(!reasons.length) reasons.push('Não foram encontrados sinais claros o suficiente para uma conclusão forte.');
+ reasons.push(`Confiança da leitura: ${confidence}${hasLabels?' (falantes identificados)':' (falantes não identificados com clareza)'}.`);
  return {score,verdict,summary,reasons,transcript:text};
 }
 async function loadTesseract(){
